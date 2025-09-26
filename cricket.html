@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <title>WATCHA SPORTS</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<script id="aclib" type="text/javascript" src="//acscdn.com/script/aclib.js"></script>
+
 <!-- Clappr -->
 <script src="https://cdn.jsdelivr.net/npm/clappr@latest/dist/clappr.min.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/clappr/clappr-level-selector-plugin@latest/dist/level-selector.min.js"></script>
@@ -16,48 +16,213 @@
     margin: 0;
     height: 100%;
     background: #000;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    color: #fff;
   }
   #player-wrapper {
     width: 100%;
     height: 100%;
+    position: relative;
+  }
+
+  /* Compact Live Counter */
+  #live-counter {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(10px);
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    z-index: 1000;
+    user-select: none;
+  }
+
+  .live-dot {
+    width: 6px;
+    height: 6px;
+    background: #ff3b30;
+    border-radius: 50%;
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.7; transform: scale(0.9); }
+  }
+
+  .eye {
+    width: 12px;
+    height: 12px;
+    fill: currentColor;
+    opacity: 0.9;
+  }
+  #viewer-count {
+    font-weight: 700;
+    color: #00d4ff;
+  }
+
+  @media (max-width: 768px) {
+    #live-counter {
+      top: 8px;
+      left: 8px;
+      padding: 3px 8px;
+      font-size: 10px;
+    }
+    .live-dot { width: 5px; height: 5px; }
+    .eye { width: 10px; height: 10px; }
   }
 </style>
 </head>
 <body>
+<div id="player-wrapper">
+  <!-- Live Counter -->
+  <div id="live-counter">
+    <div class="live-dot"></div>
+    <span>LIVE</span>
+    <svg class="eye" viewBox="0 0 24 24">
+      <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
+    </svg>
+    <span id="viewer-count">0</span>
+  </div>
+</div>
 
-<div id="player-wrapper"></div>
-
+<!-- Clappr Init -->
 <script>
-  // Direct HLS URL
-  var source = 'https://live.helloxsports.xyz/hls/test.m3u8';
-
+  var source = "https://live.helloxsports.xyz/hls/test.m3u8";
   var player = new Clappr.Player({
-      source: source,
-      parentId: "#player-wrapper",
-      autoPlay: true,
-      height: "100%",
-      width: "100%",
-      plugins: [LevelSelector, CDNByeClapprPlugin],  // Add P2P plugin here
-      watermark: "",
-      watermarkLink: "https://hellosports.live",
-      watermarkPosition: "top-right",
-      levelSelectorConfig: {
-          labels: { '360p': '', '480p': '', '720p': '', '1080p': '' },
-          labelCallback: (levelName, level) => `${level.height}p`
-      },
-      playback: {
-          hlsjsConfig: {
-              p2pConfig: {
-                  live: true,
-                  logLevel: 'debug'
-              }
-          }
+    source: source,
+    parentId: "#player-wrapper",
+    autoPlay: true,
+    height: "100%",
+    width: "100%",
+    plugins: [LevelSelector, CDNByeClapprPlugin],
+    watermark: "",
+    watermarkLink: "https://hellosports.live",
+    watermarkPosition: "top-right",
+    levelSelectorConfig: {
+      labelCallback: (levelName, level) => `${level.height}p`
+    },
+    playback: {
+      hlsjsConfig: {
+        p2pConfig: { live: true, logLevel: "none" }
       }
+    }
   });
 </script>
 
+<!-- Firebase Live Counter -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+import { getDatabase, ref, push, set, onValue, onDisconnect, get, update } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
 
+// Firebase Config
+const firebaseConfig = {
+  apiKey: "AIzaSyAOCB5-mOq3j22bSyQGkOG1uO6Q-sejPGo",
+  authDomain: "fire-9e9e1.firebaseapp.com",
+  databaseURL: "https://fire-9e9e1-default-rtdb.firebaseio.com",
+  projectId: "fire-9e9e1",
+  storageBucket: "fire-9e9e1.firebasestorage.app",
+  messagingSenderId: "228308733237",
+  appId: "1:228308733237:web:ea379f622b9128b798907c",
+  measurementId: "G-SRNVZJJ3X2"
+};
 
+// Init Firebase
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+class ViewerCounter {
+  constructor() {
+    this.viewersRef = ref(db, "viewers");
+    this.myViewerRef = null;
+    this.init();
+  }
+
+  async init() {
+    try {
+      // Unique session
+      const sessionId = Date.now() + "_" + Math.random().toString(36).substr(2, 9);
+      this.myViewerRef = push(this.viewersRef);
+
+      // Add viewer
+      await set(this.myViewerRef, {
+        sessionId: sessionId,
+        lastSeen: Date.now()
+      });
+
+      // Remove on disconnect
+      onDisconnect(this.myViewerRef).remove();
+
+      // Heartbeat every 30s
+      setInterval(() => {
+        if (this.myViewerRef) {
+          set(this.myViewerRef, {
+            sessionId: sessionId,
+            lastSeen: Date.now()
+          }).catch(() => {});
+        }
+      }, 30000);
+
+      // Listen for changes
+      onValue(this.viewersRef, (snapshot) => {
+        this.updateViewerCount(snapshot);
+      });
+
+      // Cleanup old sessions
+      this.cleanupOldSessions();
+
+    } catch (err) {
+      console.error("Firebase error:", err);
+    }
+  }
+
+  updateViewerCount(snapshot) {
+    const now = Date.now();
+    let activeViewers = 0;
+
+    snapshot.forEach((child) => {
+      const viewer = child.val();
+      if (viewer && viewer.lastSeen && now - viewer.lastSeen < 120000) {
+        activeViewers++;
+      }
+    });
+
+    this.displayCount(activeViewers);
+  }
+
+  displayCount(count) {
+    const el = document.getElementById("viewer-count");
+    if (el) el.textContent = count.toLocaleString();
+  }
+
+  async cleanupOldSessions() {
+    try {
+      const snapshot = await get(this.viewersRef);
+      const now = Date.now();
+      const updates = {};
+
+      snapshot.forEach((child) => {
+        const viewer = child.val();
+        if (viewer && viewer.lastSeen && now - viewer.lastSeen > 300000) {
+          updates[child.key] = null;
+        }
+      });
+
+      if (Object.keys(updates).length > 0) {
+        await update(this.viewersRef, updates);
+      }
+    } catch {}
+    setTimeout(() => this.cleanupOldSessions(), 60000);
+  }
+}
+
+window.addEventListener("load", () => new ViewerCounter());
+</script>
 </body>
 </html>
-
