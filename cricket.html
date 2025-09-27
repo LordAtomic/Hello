@@ -1,11 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
+<meta charset="UTF-8" />
 <title>WATCHA SPORTS</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-<!-- Clappr -->
+<!-- Clappr + Plugins -->
 <script src="https://cdn.jsdelivr.net/npm/clappr@latest/dist/clappr.min.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/clappr/clappr-level-selector-plugin@latest/dist/level-selector.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/cdnbye@latest/dist/hlsjs-p2p-engine.min.js"></script>
@@ -19,69 +19,60 @@
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     color: #fff;
   }
-  #player-wrapper {
-    width: 100%;
-    height: 100%;
-    position: relative;
-  }
+  #player-wrapper { width: 100%; height: 100%; position: relative; }
 
-  /* Compact Live Counter */
   #live-counter {
     position: absolute;
     top: 12px;
     left: 12px;
-    background: rgba(0, 0, 0, 0.8);
-    backdrop-filter: blur(10px);
-    padding: 4px 10px;
-    border-radius: 12px;
-    font-size: 11px;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(15px);
+    padding: 6px 12px;
+    border-radius: 14px;
+    font-size: 12px;
     font-weight: 600;
     display: flex;
     align-items: center;
-    gap: 5px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    gap: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
     z-index: 1000;
     user-select: none;
   }
 
   .live-dot {
-    width: 6px;
-    height: 6px;
-    background: #ff3b30;
-    border-radius: 50%;
+    width: 7px; height: 7px;
+    background: #ff3b30; border-radius: 50%;
     animation: pulse 2s ease-in-out infinite;
-  }
-  @keyframes pulse {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.7; transform: scale(0.9); }
+    box-shadow: 0 0 8px rgba(255, 59, 48, 0.5);
   }
 
-  .eye {
-    width: 12px;
-    height: 12px;
-    fill: currentColor;
-    opacity: 0.9;
+  @keyframes pulse {
+    0%,100%{opacity:1;transform:scale(1);}
+    50%{opacity:.7;transform:scale(.85);}
   }
-  #viewer-count {
-    font-weight: 700;
-    color: #00d4ff;
+
+  .eye { width: 13px; height: 13px; fill: currentColor; opacity: 0.9; }
+
+  #viewer-count { font-weight: 700; color: #00d4ff; min-width: 20px; text-align: right; }
+
+  .status-indicator {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: #34c759; margin-left: 4px;
   }
+  .status-indicator.connecting { background: #ff9500; animation: pulse 1s ease-in-out infinite; }
+  .status-indicator.error { background: #ff3b30; }
 
   @media (max-width: 768px) {
-    #live-counter {
-      top: 8px;
-      left: 8px;
-      padding: 3px 8px;
-      font-size: 10px;
-    }
-    .live-dot { width: 5px; height: 5px; }
-    .eye { width: 10px; height: 10px; }
+    #live-counter { top: 8px; left: 8px; padding: 4px 10px; font-size: 11px; }
+    .live-dot { width: 6px; height: 6px; }
+    .eye { width: 11px; height: 11px; }
   }
 </style>
 </head>
 <body>
+
 <div id="player-wrapper">
-  <!-- Live Counter -->
   <div id="live-counter">
     <div class="live-dot"></div>
     <span>LIVE</span>
@@ -89,140 +80,83 @@
       <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
     </svg>
     <span id="viewer-count">0</span>
+    <div class="status-indicator connecting" id="status-indicator"></div>
   </div>
 </div>
 
-<!-- Clappr Init -->
 <script>
-  var source = "https://live.helloxsports.xyz/hls/test.m3u8";
-  var player = new Clappr.Player({
-    source: source,
-    parentId: "#player-wrapper",
-    autoPlay: true,
-    height: "100%",
-    width: "100%",
-    plugins: [LevelSelector, CDNByeClapprPlugin],
-    watermark: "",
-    watermarkLink: "https://hellosports.live",
-    watermarkPosition: "top-right",
-    levelSelectorConfig: {
-      labelCallback: (levelName, level) => `${level.height}p`
-    },
-    playback: {
-      hlsjsConfig: {
-        p2pConfig: { live: true, logLevel: "none" }
-      }
-    }
-  });
+// Clappr Player
+const source = "https://live.helloxsports.xyz/hls/test.m3u8"; // Replace with your stream URL
+new Clappr.Player({
+  source,
+  parentId: "#player-wrapper",
+  autoPlay: true,
+  height: "100%",
+  width: "100%",
+  plugins: [LevelSelector, CDNByeClapprPlugin],
+  levelSelectorConfig: { labelCallback: (l) => `${l.height}p` },
+  playback: { hlsjsConfig: { p2pConfig: { live: true, logLevel: "none" } } }
+});
 </script>
 
-<!-- Firebase Live Counter -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
-import { getDatabase, ref, push, set, onValue, onDisconnect, get, update } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
+import { getDatabase, ref, push, set, onDisconnect, onValue, serverTimestamp, update, remove } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
 
-// Firebase Config
 const firebaseConfig = {
-  apiKey: "AIzaSyAOCB5-mOq3j22bSyQGkOG1uO6Q-sejPGo",
-  authDomain: "fire-9e9e1.firebaseapp.com",
-  databaseURL: "https://fire-9e9e1-default-rtdb.firebaseio.com",
-  projectId: "fire-9e9e1",
-  storageBucket: "fire-9e9e1.firebasestorage.app",
-  messagingSenderId: "228308733237",
-  appId: "1:228308733237:web:ea379f622b9128b798907c",
-  measurementId: "G-SRNVZJJ3X2"
+  apiKey: "AIzaSyCtv7Uy75w3UFiU5c_HcdTRfZp20dDYwkM",
+  authDomain: "live-view-a63b3.firebaseapp.com",
+  databaseURL: "https://live-view-a63b3-default-rtdb.firebaseio.com",
+  projectId: "live-view-a63b3",
+  storageBucket: "live-view-a63b3.firebasestorage.app",
+  messagingSenderId: "769846500037",
+  appId: "1:769846500037:web:449761570da8d5b82e6eac"
 };
 
-// Init Firebase
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-class ViewerCounter {
-  constructor() {
-    this.viewersRef = ref(db, "viewers");
-    this.myViewerRef = null;
-    this.init();
+const streamId = "live_stream_001"; // 🔸 Change for each match/stream
+const activeUsersRef = ref(db, `streams/${streamId}/activeUsers`);
+
+const sessionId = 'user_' + Math.random().toString(36).slice(2) + '_' + Date.now();
+const userRef = push(activeUsersRef);
+
+await set(userRef, {
+  sessionId,
+  joinTime: serverTimestamp(),
+  lastSeen: serverTimestamp(),
+  userAgent: navigator.userAgent.slice(0, 80)
+});
+
+// Remove on disconnect
+onDisconnect(userRef).remove();
+
+// Live counter UI
+const viewerCountEl = document.getElementById('viewer-count');
+const statusEl = document.getElementById('status-indicator');
+
+onValue(activeUsersRef, (snapshot) => {
+  const data = snapshot.val();
+  const count = data ? Object.keys(data).length : 0;
+  viewerCountEl.textContent = count.toLocaleString();
+  statusEl.className = 'status-indicator';
+});
+
+// Heartbeat: refresh lastSeen every 20s
+setInterval(async () => {
+  try {
+    await update(userRef, { lastSeen: serverTimestamp() });
+  } catch (e) {
+    console.error('Heartbeat failed', e);
   }
+}, 20000);
 
-  async init() {
-    try {
-      // Unique session
-      const sessionId = Date.now() + "_" + Math.random().toString(36).substr(2, 9);
-      this.myViewerRef = push(this.viewersRef);
-
-      // Add viewer
-      await set(this.myViewerRef, {
-        sessionId: sessionId,
-        lastSeen: Date.now()
-      });
-
-      // Remove on disconnect
-      onDisconnect(this.myViewerRef).remove();
-
-      // Heartbeat every 30s
-      setInterval(() => {
-        if (this.myViewerRef) {
-          set(this.myViewerRef, {
-            sessionId: sessionId,
-            lastSeen: Date.now()
-          }).catch(() => {});
-        }
-      }, 30000);
-
-      // Listen for changes
-      onValue(this.viewersRef, (snapshot) => {
-        this.updateViewerCount(snapshot);
-      });
-
-      // Cleanup old sessions
-      this.cleanupOldSessions();
-
-    } catch (err) {
-      console.error("Firebase error:", err);
-    }
-  }
-
-  updateViewerCount(snapshot) {
-    const now = Date.now();
-    let activeViewers = 0;
-
-    snapshot.forEach((child) => {
-      const viewer = child.val();
-      if (viewer && viewer.lastSeen && now - viewer.lastSeen < 120000) {
-        activeViewers++;
-      }
-    });
-
-    this.displayCount(activeViewers);
-  }
-
-  displayCount(count) {
-    const el = document.getElementById("viewer-count");
-    if (el) el.textContent = count.toLocaleString();
-  }
-
-  async cleanupOldSessions() {
-    try {
-      const snapshot = await get(this.viewersRef);
-      const now = Date.now();
-      const updates = {};
-
-      snapshot.forEach((child) => {
-        const viewer = child.val();
-        if (viewer && viewer.lastSeen && now - viewer.lastSeen > 300000) {
-          updates[child.key] = null;
-        }
-      });
-
-      if (Object.keys(updates).length > 0) {
-        await update(this.viewersRef, updates);
-      }
-    } catch {}
-    setTimeout(() => this.cleanupOldSessions(), 60000);
-  }
-}
-
-window.addEventListener("load", () => new ViewerCounter());
+// Cleanup on unload
+window.addEventListener('beforeunload', () => {
+  remove(userRef);
+});
 </script>
+
 </body>
 </html>
